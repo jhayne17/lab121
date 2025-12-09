@@ -45,6 +45,43 @@ class Server:
             """Return basic health probe result."""
             return "Presidio Anonymizer service is up"
 
+        @self.app.route("/genz-preview", methods=["GET"])
+        def genz_preview() -> Response:
+            """Return an example of Gen-Z anonymization output."""
+            response = {
+                "example": "Call Emily at 577-988-1234",
+                "example output": "Call GOAT at vibe check",
+                "description": "Example output of the genz anonymizer."
+            }
+            return jsonify(response)
+        @self.app.route("/genz", methods=["POST"])
+        def genz() -> Response:
+            """Return text anonymized using the Gen-Z operator."""
+            content = request.get_json()
+            if not content:
+                raise BadRequest("Invalid request json")
+
+            # Convert analyzer results from JSON
+            analyzer_results = AppEntitiesConvertor.analyzer_results_from_json(
+                content.get("analyzer_results", [])
+            )
+
+            # Configure the Gen-Z operator
+            anonymizers_config = {
+                "PERSON": {"type": "genz"},
+                "PHONE_NUMBER": {"type": "genz"}
+            }
+
+            # Perform anonymization
+            anonymizer_result = self.anonymizer.anonymize(
+                text=content.get("text", ""),
+                analyzer_results=analyzer_results,
+                operators=anonymizers_config
+            )
+
+            return Response(anonymizer_result.to_json(), mimetype="application/json")
+
+
         @self.app.route("/anonymize", methods=["POST"])
         def anonymize() -> Response:
             content = request.get_json()
@@ -111,12 +148,3 @@ class Server:
         def server_error(e):
             self.logger.error(f"A fatal error occurred during execution: {e}")
             return jsonify(error="Internal server error"), 500
-
-def create_app(): # noqa
-    server = Server()
-    return server.app
-
-if __name__ == "__main__":
-    app = create_app()
-    port = int(os.environ.get("PORT", DEFAULT_PORT))
-    app.run(host="0.0.0.0", port=port)
