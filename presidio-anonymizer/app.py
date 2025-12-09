@@ -54,6 +54,35 @@ class Server:
                 "description": "Example output of the genz anonymizer."
             }
             return jsonify(response)
+        
+        @self.app.route("/genz", methods=["POST"])
+
+        def genz() -> Response:
+            """Return text anonymized using the Gen-Z operator."""
+            content = request.get_json()
+            if not content:
+                raise BadRequest("Invalid request json")
+
+            # Convert analyzer results from JSON
+            analyzer_results = AppEntitiesConvertor.analyzer_results_from_json(
+                content.get("analyzer_results", [])
+            )
+
+            # Configure the Gen-Z operator
+            anonymizers_config = {
+                "PERSON": {"type": "genz"},
+                "PHONE_NUMBER": {"type": "genz"}
+            }
+
+            # Perform anonymization
+            anonymizer_result = self.anonymizer.anonymize(
+                text=content.get("text", ""),
+                analyzer_results=analyzer_results,
+                operators=anonymizers_config
+            )
+
+            return Response(anonymizer_result.to_json(), mimetype="application/json")
+
 
         @self.app.route("/anonymize", methods=["POST"])
         def anonymize() -> Response:
