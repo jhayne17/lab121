@@ -137,7 +137,6 @@ jobs:
           pip install -r e2e-tests/requirements.txt
 
       - name:Run E2
-        run: sleep 60
 
       - name: Run E2E tests
         working-directory: e2e-tests
